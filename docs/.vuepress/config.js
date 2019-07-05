@@ -2,7 +2,7 @@ module.exports = {
   title: '维罗妮卡号',
   description: 'MuLoo的个人网站',
   head: [ // 注入到当前页面的 HTML <head> 中的标签
-    ['link', { rel: 'icon', href: '/logo.jpg' }], // 增加一个自定义的 favicon(网页标签的图标)
+    ['link', { rel: 'icon', href: '../assets/logo.jpg' }], // 增加一个自定义的 favicon(网页标签的图标)
     ['link', { rel: 'apple-touch-icon', href: '/photo.jpg' }],
   ],
   serviceWorker: true, // 是否开启 PWA
