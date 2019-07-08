@@ -1,8 +1,11 @@
 module.exports = {
   title: '维罗妮卡号',
-  description: 'MuLoo的个人网站',
+  description: '宁在一思进，莫在一思停',
+  // host: '0.0.0.0', // dev主机名
+  // port: 8080, // 默认端口
+  // dest: '.vuepress/dist', // 指定 vuepress build 的输出目录
   head: [ // 注入到当前页面的 HTML <head> 中的标签
-    ['link', { rel: 'icon', href: '../assets/logo.jpg' }], // 增加一个自定义的 favicon(网页标签的图标)
+    ['link', { rel: 'icon', href: '/logo.jpg' }], // 增加一个自定义的 favicon(网页标签的图标)
     ['link', { rel: 'apple-touch-icon', href: '/photo.jpg' }],
   ],
   serviceWorker: true, // 是否开启 PWA
@@ -12,11 +15,86 @@ module.exports = {
   },
   themeConfig: {
     nav:[ // 导航栏配置
-      {text: '前端基础', link: '/accumulate/' },
-      {text: '算法题库', link: '/algorithm/'},
+      {text: '前端相关', link: '/skill/' },
+      {text: '生活随笔', link: '/life/'},
       {text: '微博', link: 'https://baidu.com'}      
     ],
-    sidebar: 'auto', // 侧边栏配置
-    sidebarDepth: 2, // 侧边栏显示2级
-  }
+    // sidebar: 'auto', // 侧边栏配置
+    sidebarDepth: 0, // 侧边栏显示2级
+    sidebar: {
+      '/skill/': [
+        {
+          title: 'JS相关',
+          collapsable: true,
+          sidebarDepth: 1,
+          children: [
+            '/skill/aboutjs/js-1.md'
+          ]
+        },
+        {
+          title: '工具相关',
+          collapsable: true,
+          sidebarDepth: 1,
+          children: [
+            '/skill/tools/markdown.md'
+          ]
+        },
+
+      ],
+      '/life/': [
+        {
+          title: '随笔',
+          collapsable: true,
+          sidebarDepth: 1,
+          children: [
+            '/life/novels/novels-1.md',
+            '/life/novels/novels-1.md',
+            '/life/novels/novels-1.md',
+            '/life/novels/novels-1.md'
+          ]
+        },
+        {
+          title: '小说',
+          collapsable: true,
+          sidebarDepth: 1,
+          children: [
+            '/life/novels/novels-1.md',
+            '/life/novels/novels-1.md',
+            '/life/novels/novels-1.md',
+            '/life/novels/novels-1.md'
+          ]
+        },
+        {
+          title: '闲聊',
+          collapsable: true,
+          sidebarDepth: 1,
+          children: [
+            '/life/novels/novels-1.md',
+            '/life/novels/novels-1.md',
+            '/life/novels/novels-1.md',
+            '/life/novels/novels-1.md'
+          ]
+        },
+        {
+          title: '吐槽',
+          collapsable: true,
+          sidebarDepth: 1,
+          children: [
+            '/life/novels/novels-1.md',
+            '/life/novels/novels-1.md',
+            '/life/novels/novels-1.md',
+            '/life/novels/novels-1.md'
+          ]
+        },
+      ]
+    },
+    lastUpdated: '最后更新于'
+  },
+  markdown: {
+    lineNumbers: false
+  },
+  configureWebpack: {
+    // 修改内部的webpack配置，将会合并
+  },
+
 };
