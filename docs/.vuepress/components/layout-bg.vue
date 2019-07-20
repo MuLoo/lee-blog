@@ -1,7 +1,5 @@
 <templtate>
-  <div>
-    this is a test components
-  </div>
+  <div></div>
 </templtate>
 <script>
 export default {

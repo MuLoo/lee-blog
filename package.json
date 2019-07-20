@@ -12,7 +12,8 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "less-loader": "^5.0.0"
+  "dependencies": {},
+  "devDependencies": {
+    "stylus": "^0.54.5"
   }
 }

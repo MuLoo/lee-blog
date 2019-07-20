@@ -28,7 +28,8 @@ module.exports = {
           collapsable: true,
           sidebarDepth: 1,
           children: [
-            '/skill/aboutjs/js-1.md'
+            '/skill/aboutjs/js-1.md',
+            '/skill/aboutjs/js-2.md'
           ]
         },
         {
@@ -76,14 +77,11 @@ module.exports = {
           ]
         },
         {
-          title: '吐槽',
+          title: '经典',
           collapsable: true,
           sidebarDepth: 1,
           children: [
-            '/life/novels/novels-1.md',
-            '/life/novels/novels-1.md',
-            '/life/novels/novels-1.md',
-            '/life/novels/novels-1.md'
+            '/life/classic/classic-1.md',
           ]
         },
       ]
@@ -95,6 +93,12 @@ module.exports = {
   },
   configureWebpack: {
     // 修改内部的webpack配置，将会合并
+    // module: {
+      // loaders: [{
+      //   test: /\.styl$/,
+      //   loader: 'css-loader!stylus-loader?paths=node_modules/bootstrap-stylus/stylus/'
+      // }]
+    // }
   },
 
 };
