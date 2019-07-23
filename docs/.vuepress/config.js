@@ -37,7 +37,9 @@ module.exports = {
           collapsable: true,
           sidebarDepth: 1,
           children: [
-            '/skill/tools/markdown.md'
+            '/skill/tools/markdown.md',
+            '/skill/tools/vscode.md',
+
           ]
         },
 
