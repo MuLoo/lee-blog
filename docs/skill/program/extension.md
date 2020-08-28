@@ -94,4 +94,260 @@ content script可能是整个拓展里跟background.js同等重要的东西。�
 
 上面的分析几乎没有API和代码，主要是为了厘清思路，知道了路的方向，怎么走就容易了。
 
-未完待续~~
+那么，开始上代码：  
+
+### 实现部分
+
+#### 首先是manifest.json
+```json
+{
+    "manifest_version": 2,
+    "name": "xxx",
+    "description": "chrome extension",
+    "version": "0.0.1",
+    "icons": {
+        "16": "icon.png",
+        "48": "icon.png",
+        "128": "icon.png"
+    },
+    "background": {
+        "scripts": ["background.js"],
+        "persistet": "true"
+    },
+    // 允许直接发送消息给拓展的页面
+    "externally_connectable": {
+        "matches": ["http://www.xxxx.com/*"]
+    },
+    // 允许加载外部资源的地址
+    "web_accessible_resources": [
+        "https://xxx.alicdn.com"
+    ],
+    "content_scripts": [
+        {
+          "matches": ["http://www.xxxx.com/*"], // 内容脚本注入的目标网页
+          "js": [
+            "contentScript.js" // 内容脚本
+        ],
+        "run_at": "document_start" // 注入时机 document_start document_end document_idle(默认)
+        }
+      ],
+    "options_page": "login.html",  // 供openOptionsPage方法使用
+    // 拓展所拥有的权限
+    "permissions": [
+        "tabs",
+        "storage",
+        "webRequest",
+        "http://*/*",
+		    "https://*/*"
+    ],
+    // 浏览器行为（工具栏拓展的图标，默认弹窗等）
+    "browser_action": {
+        "default_popup": "popup.html",
+        "default_icon": "icon.png",
+        "default_title": "xxx"
+    },
+    // 引用外部资源的地址，否则无法通过scp。拓展的html同样有scp限制。
+    "content_security_policy": "script-src 'self' https://xxx.alicdn.com 'unsafe-eval';  object-src 'self'"
+}
+```
+
+这份清单指定了background.js、contentScript、 目标页面，有了这三者，信息就可以传动起来了。 
+
+那么接下来先看 background.js：
+
+#### background.js
+
+```js
+let at = undefined // access token
+let rt = undefined // refresh token
+let first = false
+/**
+* 当background.js 开始执行的时候，也就是浏览器打开的时候。如果没有登录信息，则直接打开登录页面
+*/
+function chromeStart () {
+  first = true
+  const at = window.localStorage.getItem('Access-Token') // 是否存储了登录信息，即判断是否曾经成功登录过
+  if (at) {
+     window.chrome.tabs.update({ url: 'https://www.xxxx.com/abc' }) // 登录信息在，则直接跳去目标页面
+  } else {
+    // 否则打开登录页面。注意：这里的openOptionsPage方法需要先在manifest.json里指定 options_page
+    window.chrome.runtime.openOptionsPage(function () {
+      console.log('启动浏览器时打开新标签，新标签是拓展里的login.html')
+    })
+  }
+}
+// 只在浏览器启动时执行一次
+!first && chromeStart()
+
+/**
+* background 接受由content script传递的信息
+* @param function
+* @returns {*}
+*/
+chrome.runtime.onMessage.addListener(
+  function(request, sender, sendResponse) {
+    console.log('background 收到:', request, sender)
+    const {
+      accessToken,
+      refreshToken,
+      injected, // 表示content script已经注入网页
+      clear // 表示 网页401/退出登录，需要清除插件存储里的token
+    } = request
+    if (accessToken && refreshToken) {
+      at = accessToken
+      rt = refreshToken
+    }
+    if (injected) {
+      // 内容脚本已经注入，发送消息给内容脚本
+      sendToContentScript({ accessToken: at, refreshToken: rt })
+      sendResponse({ msg: '得知注入' })
+    }
+    if (clear) {
+      window.localStorage.removeItem('Refresh-Token')
+      window.localStorage.removeItem('Access-Token')
+      at = null
+      rt = null
+      sendResponse({ msg: '已经删除token' })
+      // chrome.tabs.update({ url: `chrome-extension://${chrome.runtime.id}/login.html` })
+      chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+        if (tabs.length) {
+          // 需要被关闭的标签页id
+          const tabIds = tabs.reduce((acc, cur) => {
+            if (cur.url.length && (cur.url.includes('www.xxxx.com'))) {
+              acc.push(cur.id)
+            }
+            return acc
+          }, [])
+          console.log('tabIds ---', tabIds)
+          // 关闭当前活动的并且url是目标页面的标签页
+          chrome.tabs.remove(tabIds)
+        }
+      })
+      // 打开拓展里的登录页
+      chrome.runtime.openOptionsPage(function () {
+        console.log('打开新标签')
+      })
+    }
+    sendResponse({ greeting: '从background返回给你' })
+  }
+)
+
+/**
+* 将拓展登录页获取到的accessToken, refreshToken 传递给已注入网页的content script
+* @param  { accessToken, refreshToken}
+* @returns { * }
+*/
+function sendToContentScript ({
+  accessToken,
+  refreshToken
+}) {
+  console.log('background在得知contentscript注入后执行')
+  chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+      // 获取当前的活动标签页，然后利用 chrome.tabs.sendMessage 将存储的登录信息传递给contentScript
+      console.log('活动的tabs:', tabs)
+      if (tabs[0] && tabs[0].id && accessToken && refreshToken) {
+        chrome.tabs.sendMessage((tabs[0] && tabs[0].id) || null, { accessToken, refreshToken }, function(response) {
+          console.log('background 收到：', response)
+        })
+      } else {
+        console.log('不符合条件：', tabs[0], accessToken, refreshToken)
+      }
+    })
+}
+
+// // background 接收由网页端发送来的消息，只能被动接收，然后回应，不能主动发送消息给网页端
+// chrome.runtime.onMessageExternal.addListener(
+//   function(request, sender, sendResponse) {
+//     alert('收到了')
+//     sendResponse('还给你')
+//   }
+// )
+```
+
+从background.js 中可以看到，它监听了来自contentScript的信息，根据contentScript里传递不同参数，来执行不同操作。同时它也发送了消息给contentScript，将登录信息告知。  
+从前面可以知道，contentScript是要被注入到目标页面的，background -- contentScript -- 目标页面，可见contentScript作为桥梁的重要性。那么接下来看contentScript:
+
+#### content script
+
+```js
+// content script 无法使用目标页面的变量、方法、window、 storage。 content script 与页面是相互独立的
+// 注入目标页面即开始执行
+// 通知background.js 已经注入页面
+chrome.runtime.sendMessage({injected: true}, function(response) {
+  // background 得知注入，并返回信息
+  console.log(response)
+})
+
+// 接收由background 发送过来的消息
+chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+  const {
+    accessToken,
+    refreshToken
+  } = request
+  // background传来了需要的信息，那么要想办法塞给目标页面
+  if (accessToken && refreshToken) {
+    const theScript = document.createElement('script') // 利用script标签，存进目标页面的localStorage
+    theScript.type = 'text/javascript'
+    const stamp = Date.now()
+    theScript.innerHTML = `
+        console.log('执行了')
+        window.localStorage && window.localStorage.setItem('Access-Token', '${accessToken}');
+        window.localStorage && window.localStorage.setItem('Refresh-Token', '${refreshToken}');
+    `
+    document.documentElement.appendChild(theScript)
+    console.log('theScript ----', theScript)
+    sendResponse('ok')
+  }
+})
+
+// 监听来自网页端的消息 （401/logout）
+window.addEventListener('message', function(event) {
+  if (event.source == window && event.data.code) {
+    if (event.data.code == '401') {
+      chrome.runtime.sendMessage({clear: true}, function(response) {
+        // background 得知需要删除token后，并返回信息
+        console.log(response)
+      })
+    } else if ( event.data.code == 'logout' ) {
+      // 退出登录了，拓展里的token也该清掉
+      chrome.runtime.sendMessage({ clear: true }, function(response) {
+        // background 得知需要删除token后，并返回信息
+        console.log(response)
+      })
+    }
+  }
+})
+```
+重要的三部分已经完成了，background 和 contentScript 已经可以互相通信。  
+整个流程是：  
+**拓展登录页 -> 成功登录 -> 告知background -> background通知内容脚本并打开目标页面 -> 内容脚本将信息嵌入目标页面 -> 目标页面拿到信息成功登录**  
+现在大部分的流程中间的流程已经通了，剩下的是头尾部分，头即在拓展的login.html里通知background.
+```js
+// 前面是登录接口验证等，在接口成功后
+// 通知background
+chrome.runtime.sendMessage({accessToken, refreshToken}, function(response) {
+  // background返回信息后
+  window.localStorage.setItem('Access-Token', accessToken) // 登录信息存储在拓展的localStorage
+  window.localStorage.setItem('Refresh-Token', refreshToken)
+  window.chrome.tabs.update({ url: 'https://www.xxxx.com/abc' }) // 打开目标页面
+})
+```
+
+尾即在目标页面的某些时刻通知contentScript, 用的是postMessage  
+
+```js
+window.postMessage({
+  code: 'logout',
+  message: 'logout'
+}, '*')
+...
+window.postMessage({
+  code: '401',
+  message: 'clearToken'
+}, '*')
+```
+
+至此，全部流程基本走完，其实看下来，关键点还是background和contentScript间的通信。
+最后用一张流程图结尾吧：
+
+![流程图](https://pic.yupoo.com/leisurenana/1af36ec4/9d15d68f.png)
