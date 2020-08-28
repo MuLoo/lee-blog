@@ -39,7 +39,16 @@ module.exports = {
           children: [
             '/skill/tools/markdown.md',
             '/skill/tools/vscode.md',
-
+            '/skill/tools/antd-vue.md',
+          ]
+        },
+        {
+          title: '项目相关',
+          collapsable: true,
+          sidebarDepth: 1,
+          children: [
+            '/skill/program/rotate-image.md',
+            '/skill/program/extension.md'
           ]
         },
 
@@ -51,7 +60,7 @@ module.exports = {
           sidebarDepth: 1,
           children: [
             '/life/novels/novels-1.md',
-            '/life/novels/novels-1.md',
+            '/life/novels/novels-2.md',
             '/life/novels/novels-1.md',
             '/life/novels/novels-1.md'
           ]
